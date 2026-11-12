@@ -3,308 +3,278 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>設備借還狀態與清單</title>
+    <title>設備掃描借還</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         * { box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            padding: 20px 15px;
-            background-color: #f4f6f9;
+            text-align: center;
+            padding: 15px;
+            background-color: #f8f9fa;
             margin: 0;
             color: #333;
         }
-        h2 { text-align: center; margin: 10px 0 20px; font-weight: 700; }
-        .btn-group {
+        .user-bar {
+            max-width: 420px;
+            margin: 0 auto 15px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            padding: 8px 14px;
+            border-radius: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .btn-logout {
+            background: #e9ecef;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #495057;
+            font-weight: 600;
+        }
+        .btn-logout:hover { background: #dee2e6; }
+        h2 { margin: 5px 0 15px; }
+
+        .mode-container {
+            margin-bottom: 12px;
             display: flex;
             justify-content: center;
             gap: 12px;
-            margin-bottom: 22px;
-            flex-wrap: wrap;
         }
-        .action-btn {
-            padding: 10px 22px;
-            border-radius: 25px;
+        .mode-btn {
+            flex: 1;
+            max-width: 160px;
+            padding: 11px 16px;
             font-size: 15px;
-            font-weight: 600;
+            border: 2px solid #007bff;
+            border-radius: 25px;
+            background-color: white;
+            color: #007bff;
             cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            border: none;
+            font-weight: bold;
             transition: all 0.2s ease;
         }
-        .btn-back { background-color: #6c757d; color: white; }
-        .btn-back:hover { background-color: #5a6268; }
-        .btn-refresh { background-color: #007bff; color: white; }
-        .btn-refresh:hover { background-color: #0056b3; }
+        .mode-btn.active-borrow {
+            background-color: #007bff;
+            color: white;
+            box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3);
+        }
+        .mode-btn.active-return {
+            background-color: #28a745;
+            border-color: #28a745;
+            color: white;
+            box-shadow: 0 3px 8px rgba(40, 167, 69, 0.3);
+        }
 
-        /* 顯眼的三欄統計數據看板 */
-        .stats-grid {
-            max-width: 950px;
-            margin: 0 auto 20px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
-        }
-        .stat-card {
-            background: #ffffff;
-            border-radius: 14px;
-            padding: 18px 12px;
-            text-align: center;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
-            border-top: 5px solid #ccc;
-        }
-        .stat-card.total { border-top-color: #007bff; }
-        .stat-card.borrowed { border-top-color: #dc3545; background-color: #fffafa; }
-        .stat-card.available { border-top-color: #28a745; background-color: #f8fff9; }
-
-        .stat-label {
-            font-size: 14px;
-            font-weight: 700;
-            color: #555;
-            margin-bottom: 6px;
-        }
-        .stat-value {
-            font-size: 32px;
-            font-weight: 800;
-            line-height: 1.1;
-        }
-        .stat-unit {
-            font-size: 14px;
-            font-weight: 600;
-            margin-left: 3px;
-        }
-        .stat-card.total .stat-value { color: #007bff; }
-        .stat-card.borrowed .stat-value { color: #dc3545; }
-        .stat-card.available .stat-value { color: #28a745; }
-
-        .toolbar {
-            max-width: 950px;
-            margin: 0 auto 12px;
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-        }
-        .search-input {
-            width: 100%;
-            max-width: 320px;
-            padding: 10px 16px;
+        .query-link {
+            display: inline-block;
+            margin-bottom: 12px;
+            padding: 6px 16px;
+            font-size: 13px;
             border: 1px solid #ced4da;
             border-radius: 20px;
-            font-size: 14px;
-            outline: none;
-            background-color: #fff;
-        }
-        .search-input:focus {
-            border-color: #007bff;
-            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+            background-color: #ffffff;
+            color: #495057;
+            text-decoration: none;
         }
 
-        .table-container {
-            max-width: 950px;
-            margin: 0 auto;
-            overflow-x: auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        #camera-select {
+            margin-bottom: 12px;
             padding: 8px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            min-width: 650px;
-        }
-        th, td {
-            padding: 12px 14px;
-            border-bottom: 1px solid #eef0f2;
             font-size: 14px;
+            border-radius: 8px;
+            border: 1px solid #ced4da;
+            width: 100%;
+            max-width: 420px;
+            background-color: white;
         }
-        th { background-color: #007bff; color: white; white-space: nowrap; }
-        th:first-child { border-top-left-radius: 6px; }
-        th:last-child { border-top-right-radius: 6px; }
-        tr:hover { background-color: #f8f9fa; }
 
-        .status-badge {
-            background-color: #ffeaa7;
-            color: #d63031;
-            padding: 4px 10px;
+        #reader {
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+            background: #000;
             border-radius: 12px;
-            font-weight: 700;
-            font-size: 12px;
-            display: inline-block;
-        }
-        #msg {
-            text-align: center;
-            font-size: 16px;
-            margin: 30px 0;
-            color: #6c757d;
-            font-weight: 600;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
         }
 
-        @media (max-width: 520px) {
-            .stats-grid { gap: 8px; }
-            .stat-card { padding: 14px 6px; }
-            .stat-label { font-size: 13px; }
-            .stat-value { font-size: 26px; }
+        #result-box {
+            margin: 15px auto 0;
+            max-width: 420px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            font-size: 14px;
+            line-height: 1.5;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: pre-wrap;
+            font-weight: 600;
+            color: #495057;
         }
+        .status-idle { color: #6c757d; }
+        .status-loading { color: #007bff; }
+        .status-success { color: #1e7e34; background-color: #d4edda !important; border-color: #c3e6cb !important; }
+        .status-error { color: #bd2130; background-color: #f8d7da !important; border-color: #f5c6cb !important; }
     </style>
 </head>
 <body>
-    <h2>📋 設備借還狀態與清單</h2>
 
-    <div class="btn-group">
-        <a href="index.html" class="action-btn btn-back">⬅ 回到掃描頁</a>
-        <button class="action-btn btn-refresh" onclick="fetchList()">🔄 重新整理</button>
+    <div class="user-bar">
+        <span id="user-display">👤 載入身分中...</span>
+        <button class="btn-logout" onclick="logout()">登出</button>
     </div>
 
-    <!-- 顯眼的統計看板 -->
-    <div class="stats-grid" id="stats-grid" style="display: none;">
-        <div class="stat-card total">
-            <div class="stat-label">📦 所有設備數</div>
-            <div class="stat-value"><span id="stat-total">0</span><span class="stat-unit">件</span></div>
-        </div>
-        <div class="stat-card borrowed">
-            <div class="stat-label">📤 已借出</div>
-            <div class="stat-value"><span id="stat-borrowed">0</span><span class="stat-unit">件</span></div>
-        </div>
-        <div class="stat-card available">
-            <div class="stat-label">✅ 剩餘可借</div>
-            <div class="stat-value"><span id="stat-available">0</span><span class="stat-unit">件</span></div>
-        </div>
+    <h2>📷 設備掃描借還</h2>
+
+    <div class="mode-container">
+        <button id="btn-borrow" class="mode-btn active-borrow" onclick="setMode('borrow')">📤 借用模式</button>
+        <button id="btn-return" class="mode-btn" onclick="setMode('return')">📥 歸還模式</button>
     </div>
 
-    <div class="toolbar" id="toolbar" style="display: none;">
-        <input type="text" id="filter-input" class="search-input" placeholder="🔍 搜尋編號、廠牌、品名或借用人..." oninput="applyFilter()">
+    <div>
+        <a href="list.html" class="query-link">📋 查看目前借出清單</a>
     </div>
 
-    <div id="msg">載入中，請稍候...</div>
-
-    <div class="table-container" id="container" style="display: none;">
-        <table>
-            <thead>
-                <tr>
-                    <th>編號</th>
-                    <th>設備名稱</th>
-                    <th>廠牌</th>
-                    <th>借用人</th>
-                    <th>狀態</th>
-                    <th>借出時間</th>
-                </tr>
-            </thead>
-            <tbody id="list-body"></tbody>
-        </table>
-    </div>
+    <select id="camera-select"></select>
+    <div id="reader"></div>
+    <div id="result-box" class="status-idle">相機啟動中，請稍候...</div>
 
     <script>
+        // ★★★ 請確認是你的 GAS Web App URL ★★★
         const API_URL = "https://script.google.com/macros/s/AKfycbzkyhOuqf9guo10dAMUtgTUFRvRhQ1PMvTVBwvDMMEE_xNr5MUSLPbzdG--RPVicFt-/exec";
 
-        let currentBorrowedItems = [];
+        let currentUser = null;
+        let isProcessing = false;
+        let currentMode = "borrow";
+        const resultBox = document.getElementById('result-box');
+        const cameraSelect = document.getElementById('camera-select');
+        const html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-        function renderTable(items) {
-            const tbody = document.getElementById('list-body');
-            tbody.innerHTML = '';
-
-            if (items.length === 0) {
-                const emptyTr = document.createElement('tr');
-                const emptyTd = document.createElement('td');
-                emptyTd.colSpan = 6;
-                emptyTd.style.textAlign = 'center';
-                emptyTd.style.padding = '25px';
-                emptyTd.style.color = '#888';
-                emptyTd.textContent = '無符合條件的借出設備';
-                emptyTr.appendChild(emptyTd);
-                tbody.appendChild(emptyTr);
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUser = localStorage.getItem("EQUIP_USER");
+            if (!savedUser) {
+                alert("尚未登入，請先輸入身分！");
+                window.location.href = "index.html";
                 return;
             }
+            currentUser = JSON.parse(savedUser);
+            document.getElementById('user-display').innerText = `👤 ${currentUser.name} (${currentUser.id})`;
+        });
 
-            items.forEach(item => {
-                const tr = document.createElement('tr');
-
-                const tdId = document.createElement('td');
-                tdId.textContent = item.id || '-';
-
-                const tdName = document.createElement('td');
-                tdName.textContent = item.name || '-';
-
-                const tdBrand = document.createElement('td');
-                tdBrand.textContent = item.brand || '-';
-
-                const tdUser = document.createElement('td');
-                if (item.borrowerName && item.borrowerId) {
-                    tdUser.textContent = `${item.borrowerName} (${item.borrowerId})`;
-                } else {
-                    tdUser.textContent = item.borrowerId || '-';
-                }
-
-                const tdStatus = document.createElement('td');
-                const badge = document.createElement('span');
-                badge.className = 'status-badge';
-                badge.textContent = item.status || '借出中';
-                tdStatus.appendChild(badge);
-
-                const tdTime = document.createElement('td');
-                tdTime.textContent = item.borrowTime || '無紀錄';
-
-                tr.append(tdId, tdName, tdBrand, tdUser, tdStatus, tdTime);
-                tbody.appendChild(tr);
-            });
+        function logout() {
+            localStorage.removeItem("EQUIP_USER");
+            window.location.href = "index.html";
         }
 
-        function applyFilter() {
-            const keyword = document.getElementById('filter-input').value.trim().toLowerCase();
-            if (!keyword) {
-                renderTable(currentBorrowedItems);
-                return;
+        function setMode(mode) {
+            currentMode = mode;
+            const btnBorrow = document.getElementById('btn-borrow');
+            const btnReturn = document.getElementById('btn-return');
+
+            if (mode === 'borrow') {
+                btnBorrow.className = "mode-btn active-borrow";
+                btnReturn.className = "mode-btn";
+            } else {
+                btnBorrow.className = "mode-btn";
+                btnReturn.className = "mode-btn active-return";
             }
-
-            const filtered = currentBorrowedItems.filter(item => {
-                return (item.id && item.id.toLowerCase().includes(keyword)) ||
-                       (item.name && item.name.toLowerCase().includes(keyword)) ||
-                       (item.brand && item.brand.toLowerCase().includes(keyword)) ||
-                       (item.borrowerName && item.borrowerName.toLowerCase().includes(keyword)) ||
-                       (item.borrowerId && item.borrowerId.toLowerCase().includes(keyword));
-            });
-
-            renderTable(filtered);
         }
 
-        function fetchList() {
-            const msg = document.getElementById('msg');
-            const container = document.getElementById('container');
-            const toolbar = document.getElementById('toolbar');
-            const statsGrid = document.getElementById('stats-grid');
-            const filterInput = document.getElementById('filter-input');
+        function setResult(message, statusClass) {
+            resultBox.className = statusClass;
+            resultBox.innerText = message;
+        }
 
-            filterInput.value = '';
-            msg.style.display = 'block';
-            msg.innerText = '讀取最新資料中...';
-            container.style.display = 'none';
-            toolbar.style.display = 'none';
-            statsGrid.style.display = 'none';
+        function onScanSuccess(decodedText) {
+            if (isProcessing) return;
+            isProcessing = true;
 
-            fetch(`${API_URL}?action=list_borrowed`)
+            if (navigator.vibrate) navigator.vibrate(80);
+
+            let parsedId = decodedText;
+            if (parsedId.includes("text=")) {
+                parsedId = parsedId.split("text=")[1].split("&")[0];
+            } else if (parsedId.includes("id=")) {
+                parsedId = parsedId.split("id=")[1].split("&")[0];
+            }
+            parsedId = parsedId.trim();
+
+            const actionLabel = currentMode === "borrow" ? "借用" : "歸還";
+            setResult(`讀取設備編號：${parsedId}\n正在處理【${actionLabel}】...`, "status-loading");
+
+            const requestUrl = `${API_URL}?id=${encodeURIComponent(parsedId)}&action=${currentMode}&user_id=${encodeURIComponent(currentUser.id)}`;
+
+            fetch(requestUrl)
                 .then(res => res.json())
-                .then(res => {
-                    if (res.success && Array.isArray(res.data)) {
-                        currentBorrowedItems = res.data;
+                .then(data => {
+                    setResult(data.message, data.success ? "status-success" : "status-error");
+                    setTimeout(() => {
+                        isProcessing = false;
+                        setResult("請對準下一個 QR Code 進行掃描...", "status-idle");
+                    }, 3500);
+                })
+                .catch(err => {
+                    setResult("連線失敗，請檢查網路或 Apps Script 權限！", "status-error");
+                    setTimeout(() => {
+                        isProcessing = false;
+                        setResult("請對準 QR Code 進行掃描...", "status-idle");
+                    }, 3500);
+                });
+        }
 
-                        const borrowedNum = res.borrowedCount !== undefined ? res.borrowedCount : currentBorrowedItems.length;
-                        const totalNum = res.totalCount !== undefined ? res.totalCount : borrowedNum;
-                        const availableNum = res.availableCount !== undefined ? res.availableCount : Math.max(0, totalNum - borrowedNum);
+        function startCamera(cameraId) {
+            html5QrCode.start(cameraId, config, onScanSuccess)
+                .then(() => {
+                    setResult("請對準 QR Code 進行掃描...", "status-idle");
+                })
+                .catch(err => {
+                    setResult("相機啟動失敗，請確認已授權攝影機權限。", "status-error");
+                });
+        }
 
-                        document.getElementById('stat-total').textContent = totalNum;
-                        document.getElementById('stat-borrowed').textContent = borrowedNum;
-                        document.getElementById('stat-available').textContent = availableNum;
-                        statsGrid.style.display = 'grid';
+        Html5Qrcode.getCameras().then(devices => {
+            if (devices && devices.length) {
+                let defaultCameraId = devices[0].id;
+                cameraSelect.innerHTML = "";
 
-                        if (currentBorrowedItems.length === 0) {
-                            msg.innerText = '🎉 目前所有設備皆在架上，無借出紀錄！';
-                            return;
-                        }
+                devices.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.id;
+                    option.text = device.label || `相機 ${index + 1}`;
+                    cameraSelect.appendChild(option);
 
-                        renderTable(currentBorrowedItems);
+                    if (/back|rear|environment/i.test(device.label)) {
+                        defaultCameraId = device.id;
+                    }
+                });
 
-                        msg.style.display = 'none';
-                        toolbar.style.display = 'flex';
-                        container.style.
+                cameraSelect.value = defaultCameraId;
+                startCamera(defaultCameraId);
+
+                cameraSelect.addEventListener('change', () => {
+                    html5QrCode.stop().then(() => {
+                        startCamera(cameraSelect.value);
+                    });
+                });
+            } else {
+                setResult("未偵測到可用相機裝置。", "status-error");
+            }
+        }).catch(err => {
+            setResult("無法讀取相機，請使用 HTTPS 連線並開放權限。", "status-error");
+        });
+    </script>
+</body>
+</html>
