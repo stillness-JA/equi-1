@@ -73,17 +73,6 @@
         .msg-error { color: #dc3545; }
         .msg-loading { color: #007bff; }
         .msg-success { color: #28a745; }
-        .footer-link {
-            margin-top: 25px;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
-        }
-        .footer-link a {
-            color: #6c757d;
-            font-size: 13px;
-            text-decoration: none;
-        }
-        .footer-link a:hover { color: #007bff; }
     </style>
 </head>
 <body>
@@ -102,13 +91,8 @@
         <input type="password" id="user-pwd" class="input-box" placeholder="請輸入密碼">
     </div>
 
-    <!-- 移除行內 onclick，改用 JS 監聽點擊 -->
     <button type="button" id="btn-login" class="btn-submit">登入系統</button>
     <div id="login-msg"></div>
-
-    <div class="footer-link">
-        <a href="list.html">📋 檢視目前借出清單</a>
-    </div>
 </div>
 
 <script>
@@ -166,10 +150,8 @@
                 });
         }
 
-        // 綁定按鈕點擊事件
         loginBtn.addEventListener('click', executeLogin);
 
-        // 綁定鍵盤 Enter 事件
         userIdInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
