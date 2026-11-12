@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>已借出設備清單</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 20px 15px;
+            background-color: #f8f9fa;
+            margin: 0;
+            color: #333;
+        }
+        h2 { text-align: center; margin: 10px 0 20px; font-weight: 700; }
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .action-btn {
+            padding: 10px 22px;
+            border-radius: 25px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            border: none;
+            transition: all 0.2s ease;
+        }
+        .btn-back { background-color: #6c757d; color: white; }
+        .btn-back:hover { background-color: #5a6268; }
+        .btn-refresh { background-color: #007bff; color: white; }
+        .btn-refresh:hover { background-color: #0056b3; }
+
+        .toolbar {
+            max-width: 950px;
+            margin: 0 auto 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .count-badge { font-size: 14px; color: #495057; font-weight: 600; }
+        .search-input {
+            width: 100%;
+            max-width: 280px;
+            padding: 9px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+            background-color: #fff;
+        }
+        .search-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+        }
+
+        .table-container {
+            max-width: 950px;
+            margin: 0 auto;
+            overflow-x: auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            padding: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 650px;
+        }
+        th, td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #eef0f2;
+            font-size: 14px;
+        }
+        th { background-color: #007bff; color: white; white-space: nowrap; }
+        th:first-child { border-top-left-radius: 6px; }
+        th:last-child { border-top-right-radius: 6px; }
+        tr:hover { background-color: #f8f9fa; }
+
+        .status-badge {
+            background-color: #ffeaa7;
+            color: #d63031;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 12px;
+            display: inline-block;
+        }
+        #msg {
+            text-align: center;
+            font-size: 16px;
+            margin: 35px 0;
+            color: #6c757d;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <h2>📋 目前已借出設備清單</h2>
+
+    <div class="btn-group">
+        <a href="index.html" class="action-btn btn-back">⬅ 回到首頁</a>
+        <button class="action-btn btn-refresh" onclick="fetchList()">🔄 重新整理</button>
+    </div>
+
+    <div class="toolbar" id="toolbar" style="display: none;">
+        <span class="count-badge" id="total-count">已借出：0 件</span>
+        <input type="text" id="filter-input" class="search-input" placeholder="🔍 搜尋編號、廠牌、品名或借用人..." oninput="applyFilter()">
+    </div>
+
+    <div id="msg">載入中，請稍候...</div>
+
+    <div class="table-container" id="container" style="display: none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>編號</th>
+                    <th>設備名稱</th>
+                    <th>廠牌</th>
+                    <th>借用人</th>
+                    <th>狀態</th>
+                    <th>借出時間</th>
+                </tr>
+            </thead>
+            <tbody id="list-body"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // ★★★ 請確認是您的 GAS Web App URL ★★★
+        const API_URL = "https://script.google.com/macros/s/AKfycbzZFL27WYHJFGgDLIZRr2t8-I9vJMfJR5T5vQCvIfTD7DD2rJex7eDIsgO6-Wwj8Dm_/exec";
+
+        let currentBorrowedItems = [];
+
+        function renderTable(items) {
+            const tbody = document.getElementById('list-body');
+            tbody.innerHTML = '';
+
+            if (items.length === 0) {
+                const emptyTr = document.createElement('tr');
+                const emptyTd = document.createElement('td');
+                emptyTd.colSpan = 6;
+                emptyTd.style.textAlign = 'center';
+                emptyTd.style.padding = '25px';
+                emptyTd.style.color = '#888';
+                emptyTd.textContent = '無符合條件的借出設備';
+                emptyTr.appendChild(emptyTd);
+                tbody.appendChild(emptyTr);
+                return;
+            }
+
+            items.forEach(item => {
+                const tr = document.createElement('tr');
+
+                // A: equipment_id
+                const tdId = document.createElement('td');
+                tdId.textContent = item.id || '-';
+
+                // D: name
+                const tdName = document.createElement('td');
+                tdName.textContent = item.name || '-';
+
+                // E: brand
+                const tdBrand = document.createElement('td');
+                tdBrand.textContent = item.brand || '-';
+
+                // F: borrower_id + G: borrower_name
+                const tdUser = document.createElement('td');
+                if (item.borrowerName && item.borrowerId) {
+                    tdUser.textContent = `${item.borrowerName} (${item.borrowerId})`;
+                } else {
+                    tdUser.textContent = item.borrowerId || '-';
+                }
+
+                // C: status
+                const tdStatus = document.createElement('td');
+                const badge = document.createElement('span');
+                badge.className = 'status-badge';
+                badge.textContent = item.status || '借出中';
+                tdStatus.appendChild(badge);
+
+                // H: borrow_time
+                const tdTime = document.createElement('td');
+                tdTime.textContent = item.borrowTime || '無紀錄';
+
+                tr.append(tdId, tdName, tdBrand, tdUser, tdStatus, tdTime);
+                tbody.appendChild(tr);
+            });
+        }
+
+        function applyFilter() {
+            const keyword = document.getElementById('filter-input').value.trim().toLowerCase();
+            if (!keyword) {
+                renderTable(currentBorrowedItems);
+                return;
+            }
+
+            const filtered = currentBorrowedItems.filter(item => {
+                return (item.id && item.id.toLowerCase().includes(keyword)) ||
+                       (item.name && item.name.toLowerCase().includes(keyword)) ||
+                       (item.brand && item.brand.toLowerCase().includes(keyword)) ||
+                       (item.borrowerName && item.borrowerName.toLowerCase().includes(keyword)) ||
+                       (item.borrowerId && item.borrowerId.toLowerCase().includes(keyword));
+            });
+
+            renderTable(filtered);
+        }
+
+        function fetchList() {
+            const msg = document.getElementById('msg');
+            const container = document.getElementById('container');
+            const toolbar = document.getElementById('toolbar');
+            const filterInput = document.getElementById('filter-input');
+            const totalCount = document.getElementById('total-count');
+
+            filterInput.value = '';
+            msg.style.display = 'block';
+            msg.innerText = '讀取最新資料中...';
+            container.style.display = 'none';
+            toolbar.style.display = 'none';
+
+            fetch(`${API_URL}?action=list_borrowed`)
+                .then(res => res.json())
+                .then(res => {
+                    if (res.success && Array.isArray(res.data)) {
+                        currentBorrowedItems = res.data;
+
+                        if (currentBorrowedItems.length === 0) {
+                            msg.innerText = '🎉 目前沒有任何設備處於借出狀態！';
+                            return;
+                        }
+
+                        totalCount.textContent = `已借出：${currentBorrowedItems.length} 件`;
+                        renderTable(currentBorrowedItems);
+
+                        msg.style.display = 'none';
+                        toolbar.style.display = 'flex';
+                        container.style.display = 'block';
+                    } else {
+                        msg.innerText = '讀取失敗：' + (res.message || '未知錯誤');
+                    }
+                })
+                .catch(err => {
+                    msg.innerText = '網路或連線錯誤，無法載入清單。';
+                });
+        }
+
+        window.addEventListener('DOMContentLoaded', fetchList);
+    </script>
+</body>
+</html>
