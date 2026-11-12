@@ -25,19 +25,9 @@
             max-width: 380px;
             text-align: center;
         }
-        h2 {
-            margin: 0 0 8px;
-            color: #333;
-        }
-        p {
-            color: #666;
-            font-size: 14px;
-            margin: 0 0 25px;
-        }
-        .input-group {
-            margin-bottom: 18px;
-            text-align: left;
-        }
+        h2 { margin: 0 0 8px; color: #333; }
+        p { color: #666; font-size: 14px; margin: 0 0 25px; }
+        .input-group { margin-bottom: 18px; text-align: left; }
         .input-group label {
             display: block;
             font-size: 14px;
@@ -71,13 +61,8 @@
             cursor: pointer;
             transition: background-color 0.2s;
         }
-        .btn-submit:hover {
-            background-color: #0056b3;
-        }
-        .btn-submit:disabled {
-            background-color: #adb5bd;
-            cursor: not-allowed;
-        }
+        .btn-submit:hover { background-color: #0056b3; }
+        .btn-submit:disabled { background-color: #adb5bd; cursor: not-allowed; }
         #login-msg {
             margin-top: 15px;
             font-size: 14px;
@@ -98,9 +83,7 @@
             font-size: 13px;
             text-decoration: none;
         }
-        .footer-link a:hover {
-            color: #007bff;
-        }
+        .footer-link a:hover { color: #007bff; }
     </style>
 </head>
 <body>
@@ -128,10 +111,9 @@
 </div>
 
 <script>
-    // ★★★ GAS Web App URL ★★★
+    // 已代入您最新的 GAS Web App URL
     const API_URL = "https://script.google.com/macros/s/AKfycbzkyhOuqf9guo10dAMUtgTUFRvRhQ1PMvTVBwvDMMEE_xNr5MUSLPbzdG--RPVicFt-/exec";
 
-    // 若瀏覽器已有登入紀錄，自動跳轉至掃描頁面
     window.addEventListener('DOMContentLoaded', () => {
         const savedUser = localStorage.getItem("EQUIP_USER");
         if (savedUser) {
@@ -139,7 +121,6 @@
         }
     });
 
-    // 帳號欄按 Enter 跳至密碼欄，密碼欄按 Enter 送出登入
     document.getElementById('user-id').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -166,4 +147,34 @@
         }
 
         btn.disabled = true;
-        msgDiv.className =
+        msgDiv.className = "msg-loading";
+        msgDiv.innerText = "驗證帳號與密碼中...";
+
+        const loginUrl = `${API_URL}?action=login&user_id=${encodeURIComponent(userId)}&password=${encodeURIComponent(password)}`;
+
+        fetch(loginUrl)
+            .then(res => res.json())
+            .then(res => {
+                if (res.success && res.user) {
+                    localStorage.setItem("EQUIP_USER", JSON.stringify(res.user));
+                    msgDiv.className = "msg-success";
+                    msgDiv.innerText = `登入成功！歡迎 ${res.user.name}，正在跳轉...`;
+                    setTimeout(() => {
+                        window.location.href = "scan.html";
+                    }, 700);
+                } else {
+                    btn.disabled = false;
+                    msgDiv.className = "msg-error";
+                    msgDiv.innerText = res.message || "登入失敗，請確認帳號密碼。";
+                }
+            })
+            .catch(err => {
+                console.error("Login Error:", err);
+                btn.disabled = false;
+                msgDiv.className = "msg-error";
+                msgDiv.innerText = "連線失敗，請檢查網路或系統設定。";
+            });
+    }
+</script>
+</body>
+</html>
