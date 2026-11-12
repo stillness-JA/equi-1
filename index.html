@@ -102,7 +102,8 @@
         <input type="password" id="user-pwd" class="input-box" placeholder="請輸入密碼">
     </div>
 
-    <button id="btn-login" class="btn-submit" onclick="handleLogin()">登入系統</button>
+    <!-- 移除行內 onclick，改用 JS 監聽點擊 -->
+    <button type="button" id="btn-login" class="btn-submit">登入系統</button>
     <div id="login-msg"></div>
 
     <div class="footer-link">
@@ -113,26 +114,76 @@
 <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzkyhOuqf9guo10dAMUtgTUFRvRhQ1PMvTVBwvDMMEE_xNr5MUSLPbzdG--RPVicFt-/exec";
 
-    window.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', function() {
         const savedUser = localStorage.getItem("EQUIP_USER");
         if (savedUser) {
             window.location.href = "scan.html";
+            return;
         }
-    });
 
-    document.getElementById('user-id').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            document.getElementById('user-pwd').focus();
+        const userIdInput = document.getElementById('user-id');
+        const userPwdInput = document.getElementById('user-pwd');
+        const loginBtn = document.getElementById('btn-login');
+        const msgDiv = document.getElementById('login-msg');
+
+        function executeLogin() {
+            const userId = userIdInput.value.trim();
+            const password = userPwdInput.value.trim();
+
+            if (!userId || !password) {
+                msgDiv.className = "msg-error";
+                msgDiv.innerText = "請完整輸入學號與密碼！";
+                return;
+            }
+
+            loginBtn.disabled = true;
+            msgDiv.className = "msg-loading";
+            msgDiv.innerText = "驗證帳號與密碼中...";
+
+            const loginUrl = API_URL + "?action=login&user_id=" + encodeURIComponent(userId) + "&password=" + encodeURIComponent(password);
+
+            fetch(loginUrl)
+                .then(function(res) { return res.json(); })
+                .then(function(res) {
+                    if (res.success && res.user) {
+                        localStorage.setItem("EQUIP_USER", JSON.stringify(res.user));
+                        msgDiv.className = "msg-success";
+                        msgDiv.innerText = "登入成功！歡迎 " + res.user.name + "，正在跳轉...";
+                        setTimeout(function() {
+                            window.location.href = "scan.html";
+                        }, 700);
+                    } else {
+                        loginBtn.disabled = false;
+                        msgDiv.className = "msg-error";
+                        msgDiv.innerText = res.message || "登入失敗，請確認帳號密碼。";
+                    }
+                })
+                .catch(function(err) {
+                    console.error("Login Error:", err);
+                    loginBtn.disabled = false;
+                    msgDiv.className = "msg-error";
+                    msgDiv.innerText = "連線失敗，請檢查網路或系統設定。";
+                });
         }
-    });
 
-    document.getElementById('user-pwd').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleLogin();
-        }
-    });
+        // 綁定按鈕點擊事件
+        loginBtn.addEventListener('click', executeLogin);
 
-    function handleLogin() {
-        const userId = document.getElementById('user-
+        // 綁定鍵盤 Enter 事件
+        userIdInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                userPwdInput.focus();
+            }
+        });
+
+        userPwdInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                executeLogin();
+            }
+        });
+    });
+</script>
+</body>
+</html>
