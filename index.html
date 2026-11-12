@@ -18,17 +18,33 @@
         }
         .login-card {
             background: white;
-            padding: 30px 25px;
+            padding: 32px 26px;
             border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
             width: 100%;
             max-width: 380px;
             text-align: center;
         }
-        h2 { margin-bottom: 8px; color: #333; }
-        p { color: #666; font-size: 14px; margin-bottom: 25px; }
-        .input-group { margin-bottom: 20px; text-align: left; }
-        .input-group label { display: block; font-size: 14px; color: #495057; margin-bottom: 6px; font-weight: 600; }
+        h2 {
+            margin: 0 0 8px;
+            color: #333;
+        }
+        p {
+            color: #666;
+            font-size: 14px;
+            margin: 0 0 25px;
+        }
+        .input-group {
+            margin-bottom: 18px;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            font-size: 14px;
+            color: #495057;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
         .input-box {
             width: 100%;
             padding: 12px 14px;
@@ -36,11 +52,16 @@
             border-radius: 8px;
             font-size: 16px;
             outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
-        .input-box:focus { border-color: #007bff; box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15); }
+        .input-box:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+        }
         .btn-submit {
             width: 100%;
             padding: 12px;
+            margin-top: 6px;
             background-color: #007bff;
             color: white;
             border: none;
@@ -48,37 +69,69 @@
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
+            transition: background-color 0.2s;
         }
-        .btn-submit:hover { background-color: #0056b3; }
-        .btn-submit:disabled { background-color: #adb5bd; cursor: not-allowed; }
-        #login-msg { margin-top: 15px; font-size: 14px; min-height: 20px; font-weight: 500; }
+        .btn-submit:hover {
+            background-color: #0056b3;
+        }
+        .btn-submit:disabled {
+            background-color: #adb5bd;
+            cursor: not-allowed;
+        }
+        #login-msg {
+            margin-top: 15px;
+            font-size: 14px;
+            min-height: 20px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
         .msg-error { color: #dc3545; }
         .msg-loading { color: #007bff; }
+        .msg-success { color: #28a745; }
+        .footer-link {
+            margin-top: 25px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+        .footer-link a {
+            color: #6c757d;
+            font-size: 13px;
+            text-decoration: none;
+        }
+        .footer-link a:hover {
+            color: #007bff;
+        }
     </style>
 </head>
 <body>
 
 <div class="login-card">
     <h2>🏫 設備借還系統</h2>
-    <p>請先驗證學生或教職員身分</p>
+    <p>請輸入學號與密碼進行身分驗證</p>
 
     <div class="input-group">
         <label for="user-id">學號 / 員工編號</label>
-        <input type="text" id="user-id" class="input-box" placeholder="例如：S112001" autofocus>
+        <input type="text" id="user-id" class="input-box" placeholder="請輸入學號或編號" autofocus>
     </div>
 
-    <button id="btn-login" class="btn-submit" onclick="handleLogin()">登入身分</button>
+    <div class="input-group">
+        <label for="user-pwd">密碼</label>
+        <input type="password" id="user-pwd" class="input-box" placeholder="請輸入密碼">
+    </div>
+
+    <button id="btn-login" class="btn-submit" onclick="handleLogin()">登入系統</button>
     <div id="login-msg"></div>
 
-    <div style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 15px;">
-        <a href="list.html" style="color: #6c757d; font-size: 13px; text-decoration: none;">📋 檢視目前借出清單</a>
+    <div class="footer-link">
+        <a href="list.html">📋 檢視目前借出清單</a>
     </div>
 </div>
 
 <script>
-    // ★★★ 請替換成你的 GAS Web App URL ★★★
-    const API_URL = "https://script.google.com/macros/s/AKfycbzZFL27WYHJFGgDLIZRr2t8-I9vJMfJR5T5vQCvIfTD7DD2rJex7eDIsgO6-Wwj8Dm_/exec";
+    // ★★★ GAS Web App URL ★★★
+    const API_URL = "https://script.google.com/macros/s/AKfycbzmBXl82KlfLR3GBtRhKv8GQ8b7BEOcDs-C1ywubNC5yYIlQcb0UYOFg2fEmSBxZt4/exec";
 
+    // 若瀏覽器已有登入紀錄，自動跳轉至掃描頁面
     window.addEventListener('DOMContentLoaded', () => {
         const savedUser = localStorage.getItem("EQUIP_USER");
         if (savedUser) {
@@ -86,47 +139,31 @@
         }
     });
 
+    // 帳號欄按 Enter 跳至密碼欄，密碼欄按 Enter 送出登入
     document.getElementById('user-id').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') handleLogin();
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('user-pwd').focus();
+        }
+    });
+    document.getElementById('user-pwd').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleLogin();
+        }
     });
 
     function handleLogin() {
         const userId = document.getElementById('user-id').value.trim();
+        const password = document.getElementById('user-pwd').value.trim();
         const msgDiv = document.getElementById('login-msg');
         const btn = document.getElementById('btn-login');
 
-        if (!userId) {
+        if (!userId || !password) {
             msgDiv.className = "msg-error";
-            msgDiv.innerText = "請輸入學號或員工編號！";
+            msgDiv.innerText = "請完整輸入學號與密碼！";
             return;
         }
 
         btn.disabled = true;
-        msgDiv.className = "msg-loading";
-        msgDiv.innerText = "驗證身分中...";
-
-        fetch(`${API_URL}?action=login&user_id=${encodeURIComponent(userId)}`)
-            .then(res => res.json())
-            .then(res => {
-                if (res.success && res.user) {
-                    localStorage.setItem("EQUIP_USER", JSON.stringify(res.user));
-                    msgDiv.style.color = "green";
-                    msgDiv.innerText = `登入成功！歡迎 ${res.user.name}，正在轉跳...`;
-                    setTimeout(() => {
-                        window.location.href = "scan.html";
-                    }, 800);
-                } else {
-                    btn.disabled = false;
-                    msgDiv.className = "msg-error";
-                    msgDiv.innerText = res.message || "登入失敗";
-                }
-            })
-            .catch(err => {
-                btn.disabled = false;
-                msgDiv.className = "msg-error";
-                msgDiv.innerText = "連線失敗，請檢查網路或系統設定。";
-            });
-    }
-</script>
-</body>
-</html>
+        msgDiv.className =
