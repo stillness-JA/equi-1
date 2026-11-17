@@ -13,7 +13,7 @@
             margin: 0;
             color: #333;
         }
-        /* 與 scan.html 位置、寬度、樣式 100% 相同的頂部資訊與登出列 */
+        /* 與 scan.html 100% 相同的頂部使用者與登出列 */
         .user-bar {
             max-width: 420px;
             margin: 0 auto 15px auto;
@@ -22,63 +22,24 @@
             align-items: center;
             background: #ffffff;
             padding: 8px 14px;
-            border-radius: 25px;
+            border-radius: 20px;
             box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 600;
-            gap: 6px;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 5px;
-            text-align: left;
-        }
-        .role-tag {
-            background: #007bff;
-            color: white;
-            font-size: 11px;
-            padding: 2px 8px;
-            border-radius: 10px;
-        }
-        .role-tag.admin { background: #dc3545; }
-        .right-controls {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-shrink: 0;
-        }
-        .timer-tag {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeeba;
-            font-size: 12px;
-            padding: 4px 9px;
-            border-radius: 12px;
-            font-variant-numeric: tabular-nums;
-            transition: all 0.2s;
-        }
-        .timer-tag.warning {
-            background: #f8d7da;
-            color: #721c24;
-            border-color: #f5c6cb;
-            font-weight: 700;
         }
         .btn-logout {
             background: #e9ecef;
             border: none;
-            padding: 6px 14px;
-            border-radius: 15px;
+            padding: 5px 12px;
+            border-radius: 12px;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 12px;
             color: #495057;
             font-weight: 600;
-            transition: background-color 0.2s;
         }
         .btn-logout:hover { background: #dee2e6; }
 
-        h2 { text-align: center; margin: 5px 0 16px; font-weight: 700; }
+        h2 { text-align: center; margin: 5px 0 15px; font-weight: 700; }
 
         .btn-group {
             display: flex;
@@ -224,13 +185,10 @@
 </head>
 <body>
 
-    <!-- 與 scan.html 完全一致的頂部使用者與登出列 -->
+    <!-- 與 scan.html 完全一致的頂部資訊與登出列 -->
     <div class="user-bar">
-        <div class="user-info" id="user-display">👤 載入身分中...</div>
-        <div class="right-controls">
-            <span id="idle-timer" class="timer-tag" title="閒置 10 秒將自動登出">⏳ 10s</span>
-            <button type="button" class="btn-logout" onclick="logout()">登出</button>
-        </div>
+        <span id="user-display">👤 載入身分中...</span>
+        <button type="button" class="btn-logout" onclick="logout()">登出</button>
     </div>
 
     <h2 id="page-title">📋 借還狀態與紀錄查詢</h2>
@@ -313,11 +271,6 @@
 
         function resetIdleTimer() {
             idleSeconds = 10;
-            const timerEl = document.getElementById('idle-timer');
-            if (timerEl) {
-                timerEl.innerText = `⏳ ${idleSeconds}s`;
-                timerEl.classList.remove('warning');
-            }
         }
 
         ['click', 'touchstart', 'keypress', 'scroll', 'input'].forEach(evt => {
@@ -330,13 +283,6 @@
                 return;
             }
             idleSeconds--;
-            const timerEl = document.getElementById('idle-timer');
-            if (timerEl) {
-                timerEl.innerText = `⏳ ${Math.max(0, idleSeconds)}s`;
-                if (idleSeconds <= 3) {
-                    timerEl.classList.add('warning');
-                }
-            }
             if (idleSeconds <= 0) {
                 logout();
             }
@@ -357,9 +303,7 @@
             const roleLower = (currentUser.role || "").toLowerCase().trim();
             isAdminUser = (roleLower === "admin" || roleLower === "管理者");
 
-            const userDisplay = document.getElementById('user-display');
-            userDisplay.innerHTML = `<span>👤 ${currentUser.name} (${currentUser.id})</span> <span class="role-tag ${isAdminUser ? 'admin' : ''}">${isAdminUser ? '管理者' : '一般使用者'}</span>`;
-
+            document.getElementById('user-display').innerText = `👤 ${currentUser.name} (${currentUser.id})`;
             document.getElementById('page-title').innerText = isAdminUser ? "📊 管理者設備總覽與借還紀錄" : "📋 我的借用與歸還紀錄";
             document.getElementById('active-title').innerText = isAdminUser ? "📤 全系統目前借出中設備" : "📤 我目前尚未歸還的設備";
             document.getElementById('history-title').innerText = isAdminUser ? "🕒 全體人員歷史借還流水帳" : "🕒 我的歷史借還紀錄";
@@ -391,4 +335,130 @@
                 td.style.padding = '22px';
                 td.style.color = '#888';
                 td.textContent = isAdminUser ? '🎉 目前沒有任何設備處於借出狀態！' : '✅ 您目前沒有未歸還的設備';
-                tr
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+                return;
+            }
+
+            items.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.id || '-'}</td>
+                    <td>${item.name || '-'}</td>
+                    <td>${item.brand || '-'}</td>
+                    <td>${item.borrowerName ? `${item.borrowerName} (${item.borrowerId})` : (item.borrowerId || '-')}</td>
+                    <td><span class="badge-borrowed">${item.status || '借出中'}</span></td>
+                    <td>${item.borrowTime || '無紀錄'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderHistoryTable(logs) {
+            const tbody = document.getElementById('history-body');
+            tbody.innerHTML = '';
+
+            if (logs.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 5;
+                td.style.textAlign = 'center';
+                td.style.padding = '22px';
+                td.style.color = '#888';
+                td.textContent = '尚無符合條件的歷史借還紀錄';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+                return;
+            }
+
+            logs.forEach(log => {
+                const tr = document.createElement('tr');
+                const isUnreturned = (log.returnTime === "尚未歸還");
+                const statusHtml = isUnreturned
+                    ? `<span class="badge-borrowed">尚未歸還</span>`
+                    : `<span class="badge-returned">已歸還</span> <span style="font-size:12px;color:#666;margin-left:4px;">${log.returnTime}</span>`;
+
+                tr.innerHTML = `
+                    <td>${log.equipmentId || '-'}</td>
+                    <td>${log.equipmentName || '-'}</td>
+                    <td>${log.userName ? `${log.userName} (${log.userId})` : (log.userId || '-')}</td>
+                    <td>${log.borrowTime || '-'}</td>
+                    <td>${statusHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function applyHistoryFilter() {
+            resetIdleTimer();
+            const keyword = document.getElementById('filter-input').value.trim().toLowerCase();
+            if (!keyword) {
+                renderHistoryTable(allHistoryLogs);
+                return;
+            }
+            const filtered = allHistoryLogs.filter(log => {
+                return (log.equipmentId && log.equipmentId.toLowerCase().includes(keyword)) ||
+                       (log.equipmentName && log.equipmentName.toLowerCase().includes(keyword)) ||
+                       (log.userName && log.userName.toLowerCase().includes(keyword)) ||
+                       (log.userId && log.userId.toLowerCase().includes(keyword));
+            });
+            renderHistoryTable(filtered);
+        }
+
+        function fetchRecords() {
+            resetIdleTimer();
+            isFetching = true;
+
+            const msg = document.getElementById('msg');
+            const statsGrid = document.getElementById('stats-grid');
+            const activeSection = document.getElementById('active-section');
+            const historySection = document.getElementById('history-section');
+            const filterInput = document.getElementById('filter-input');
+
+            filterInput.value = '';
+            msg.style.display = 'block';
+            msg.innerText = '讀取最新資料中，請稍候...';
+            statsGrid.style.display = 'none';
+            activeSection.style.display = 'none';
+            historySection.style.display = 'none';
+
+            const url = `${API_URL}?action=get_records&user_id=${encodeURIComponent(currentUser.id)}&role=${encodeURIComponent(currentUser.role || 'user')}`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(res => {
+                    isFetching = false;
+                    resetIdleTimer();
+
+                    if (res.success) {
+                        msg.style.display = 'none';
+
+                        if (res.isAdmin || res.totalCount !== undefined) {
+                            document.getElementById('stat-total').textContent = res.totalCount || 0;
+                            document.getElementById('stat-borrowed').textContent = res.borrowedCount || 0;
+                            document.getElementById('stat-available').textContent = res.availableCount || 0;
+                            statsGrid.style.display = 'grid';
+                        }
+
+                        const activeItems = res.borrowedList || res.data || [];
+                        renderActiveTable(activeItems);
+                        activeSection.style.display = 'block';
+
+                        if (Array.isArray(res.historyLogs)) {
+                            allHistoryLogs = res.historyLogs;
+                            renderHistoryTable(allHistoryLogs);
+                            historySection.style.display = 'block';
+                        }
+                    } else {
+                        msg.innerText = '讀取失敗：' + (res.message || '未知錯誤');
+                    }
+                })
+                .catch(err => {
+                    isFetching = false;
+                    resetIdleTimer();
+                    msg.innerText = '網路或連線錯誤，無法載入紀錄。';
+                });
+        }
+    </script>
+</body>
+</html>
