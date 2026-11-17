@@ -189,7 +189,6 @@
     </div>
 
     <script>
-        // 立即同步讀取同一位登入者，不顯示任何載入文字
         const savedUserRaw = localStorage.getItem("EQUIP_USER");
         if (!savedUserRaw) {
             window.location.replace("index.html");
@@ -268,17 +267,18 @@
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbzkyhOuqf9guo10dAMUtgTUFRvRhQ1PMvTVBwvDMMEE_xNr5MUSLPbzdG--RPVicFt-/exec";
+        const IDLE_LIMIT_SECONDS = 120; // 閒置 2 分鐘自動登出
 
         let allHistoryLogs = [];
         let isFetching = false;
-        let idleSeconds = 10;
+        let idleSeconds = IDLE_LIMIT_SECONDS;
 
         document.getElementById('page-title').innerText = isAdminUser ? "📊 管理者設備總覽與借還紀錄" : "📋 我的借用與歸還紀錄";
         document.getElementById('active-title').innerText = isAdminUser ? "📤 全系統目前借出中設備" : "📤 我目前尚未歸還的設備";
         document.getElementById('history-title').innerText = isAdminUser ? "🕒 全體人員歷史借還流水帳" : "🕒 我的歷史借還紀錄";
 
         function resetIdleTimer() {
-            idleSeconds = 10;
+            idleSeconds = IDLE_LIMIT_SECONDS;
         }
 
         ['click', 'touchstart', 'keypress', 'scroll', 'input'].forEach(evt => {
