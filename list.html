@@ -3,20 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>設備借還狀態與清單</title>
+    <title>借還狀態與紀錄查詢</title>
     <style>
         * { box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            padding: 20px 15px;
+            padding: 15px;
             background-color: #f4f6f9;
             margin: 0;
             color: #333;
         }
-        h2 { text-align: center; margin: 10px 0 20px; font-weight: 700; }
+        /* 全站統一頂部使用者與登出列 */
+        .user-bar {
+            max-width: 950px;
+            margin: 0 auto 16px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            padding: 8px 14px;
+            border-radius: 25px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            font-size: 13px;
+            font-weight: 600;
+            gap: 8px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .role-tag {
+            background: #007bff;
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .role-tag.admin { background: #dc3545; }
+        .right-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .timer-tag {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            font-size: 12px;
+            padding: 4px 9px;
+            border-radius: 12px;
+            font-variant-numeric: tabular-nums;
+        }
+        .timer-tag.warning {
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+            font-weight: 700;
+        }
+        .btn-logout {
+            background: #e9ecef;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #495057;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .btn-logout:hover { background: #dee2e6; }
+
+        h2 { text-align: center; margin: 8px 0 16px; font-weight: 700; }
+
         .btn-group {
             display: flex;
             justify-content: center;
+            align-items: center;
             gap: 12px;
             margin-bottom: 22px;
             flex-wrap: wrap;
@@ -24,7 +89,7 @@
         .action-btn {
             padding: 10px 22px;
             border-radius: 25px;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
             text-decoration: none;
@@ -38,10 +103,10 @@
         .btn-refresh { background-color: #007bff; color: white; }
         .btn-refresh:hover { background-color: #0056b3; }
 
-        /* 顯眼的三欄統計數據看板 */
+        /* 管理者專屬三欄統計看板 */
         .stats-grid {
             max-width: 950px;
-            margin: 0 auto 20px;
+            margin: 0 auto 22px;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 14px;
@@ -58,37 +123,32 @@
         .stat-card.borrowed { border-top-color: #dc3545; background-color: #fffafa; }
         .stat-card.available { border-top-color: #28a745; background-color: #f8fff9; }
 
-        .stat-label {
-            font-size: 14px;
-            font-weight: 700;
-            color: #555;
-            margin-bottom: 6px;
-        }
-        .stat-value {
-            font-size: 32px;
-            font-weight: 800;
-            line-height: 1.1;
-        }
-        .stat-unit {
-            font-size: 14px;
-            font-weight: 600;
-            margin-left: 3px;
-        }
+        .stat-label { font-size: 14px; font-weight: 700; color: #555; margin-bottom: 6px; }
+        .stat-value { font-size: 32px; font-weight: 800; line-height: 1.1; }
+        .stat-unit { font-size: 14px; font-weight: 600; margin-left: 3px; }
         .stat-card.total .stat-value { color: #007bff; }
         .stat-card.borrowed .stat-value { color: #dc3545; }
         .stat-card.available .stat-value { color: #28a745; }
 
-        .toolbar {
+        .section-header {
             max-width: 950px;
-            margin: 0 auto 12px;
+            margin: 24px auto 12px;
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0;
         }
         .search-input {
             width: 100%;
-            max-width: 320px;
-            padding: 10px 16px;
+            max-width: 300px;
+            padding: 9px 15px;
             border: 1px solid #ced4da;
             border-radius: 20px;
             font-size: 14px;
@@ -102,7 +162,7 @@
 
         .table-container {
             max-width: 950px;
-            margin: 0 auto;
+            margin: 0 auto 20px;
             overflow-x: auto;
             background: white;
             border-radius: 12px;
@@ -121,13 +181,23 @@
             font-size: 14px;
         }
         th { background-color: #007bff; color: white; white-space: nowrap; }
+        th.history-th { background-color: #495057; }
         th:first-child { border-top-left-radius: 6px; }
         th:last-child { border-top-right-radius: 6px; }
         tr:hover { background-color: #f8f9fa; }
 
-        .status-badge {
+        .badge-borrowed {
             background-color: #ffeaa7;
             color: #d63031;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 12px;
+            display: inline-block;
+        }
+        .badge-returned {
+            background-color: #d4edda;
+            color: #155724;
             padding: 4px 10px;
             border-radius: 12px;
             font-weight: 700;
@@ -151,14 +221,23 @@
     </style>
 </head>
 <body>
-    <h2>📋 設備借還狀態與清單</h2>
 
-    <div class="btn-group">
-        <a href="index.html" class="action-btn btn-back">⬅ 回到掃描頁</a>
-        <button class="action-btn btn-refresh" onclick="fetchList()">🔄 重新整理</button>
+    <div class="user-bar">
+        <div class="user-info" id="user-display">👤 載入身分中...</div>
+        <div class="right-controls">
+            <span id="idle-timer" class="timer-tag" title="閒置 10 秒將自動登出">⏳ 10s</span>
+            <button type="button" class="btn-logout" onclick="logout()">登出</button>
+        </div>
     </div>
 
-    <!-- 顯眼的統計看板 -->
+    <h2 id="page-title">📋 借還狀態與紀錄查詢</h2>
+
+    <div class="btn-group">
+        <a href="scan.html" class="action-btn btn-back">⬅ 回到掃描頁</a>
+        <button type="button" class="action-btn btn-refresh" onclick="fetchRecords()">🔄 重新整理</button>
+    </div>
+
+    <!-- 管理者專屬統計看板 -->
     <div class="stats-grid" id="stats-grid" style="display: none;">
         <div class="stat-card total">
             <div class="stat-label">📦 所有設備數</div>
@@ -174,150 +253,91 @@
         </div>
     </div>
 
-    <div class="toolbar" id="toolbar" style="display: none;">
-        <input type="text" id="filter-input" class="search-input" placeholder="🔍 搜尋編號、廠牌、品名或借用人..." oninput="applyFilter()">
+    <div id="msg">讀取最新資料中，請稍候...</div>
+
+    <!-- 區塊一：目前借用中設備 -->
+    <div id="active-section" style="display: none;">
+        <div class="section-header">
+            <h3 class="section-title" id="active-title">📤 目前借用中設備</h3>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>設備編號</th>
+                        <th>設備名稱</th>
+                        <th>廠牌</th>
+                        <th>借用人</th>
+                        <th>狀態</th>
+                        <th>借出時間</th>
+                    </tr>
+                </thead>
+                <tbody id="active-body"></tbody>
+            </table>
+        </div>
     </div>
 
-    <div id="msg">載入中，請稍候...</div>
-
-    <div class="table-container" id="container" style="display: none;">
-        <table>
-            <thead>
-                <tr>
-                    <th>編號</th>
-                    <th>設備名稱</th>
-                    <th>廠牌</th>
-                    <th>借用人</th>
-                    <th>狀態</th>
-                    <th>借出時間</th>
-                </tr>
-            </thead>
-            <tbody id="list-body"></tbody>
-        </table>
+    <!-- 區塊二：歷史借用與歸還紀錄 -->
+    <div id="history-section" style="display: none;">
+        <div class="section-header">
+            <h3 class="section-title" id="history-title">🕒 歷史借還紀錄</h3>
+            <input type="text" id="filter-input" class="search-input" placeholder="🔍 搜尋設備編號、名稱或借用人..." oninput="applyHistoryFilter()">
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="history-th">設備編號</th>
+                        <th class="history-th">設備名稱</th>
+                        <th class="history-th">借用人</th>
+                        <th class="history-th">借出時間</th>
+                        <th class="history-th">歸還時間 / 狀態</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body"></tbody>
+            </table>
+        </div>
     </div>
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbzkyhOuqf9guo10dAMUtgTUFRvRhQ1PMvTVBwvDMMEE_xNr5MUSLPbzdG--RPVicFt-/exec";
 
-        let currentBorrowedItems = [];
+        let currentUser = null;
+        let isAdminUser = false;
+        let allHistoryLogs = [];
+        let isFetching = false;
+        let idleSeconds = 10;
 
-        function renderTable(items) {
-            const tbody = document.getElementById('list-body');
-            tbody.innerHTML = '';
+        function resetIdleTimer() {
+            idleSeconds = 10;
+            const timerEl = document.getElementById('idle-timer');
+            if (timerEl) {
+                timerEl.innerText = `⏳ ${idleSeconds}s`;
+                timerEl.classList.remove('warning');
+            }
+        }
 
-            if (items.length === 0) {
-                const emptyTr = document.createElement('tr');
-                const emptyTd = document.createElement('td');
-                emptyTd.colSpan = 6;
-                emptyTd.style.textAlign = 'center';
-                emptyTd.style.padding = '25px';
-                emptyTd.style.color = '#888';
-                emptyTd.textContent = '無符合條件的借出設備';
-                emptyTr.appendChild(emptyTd);
-                tbody.appendChild(emptyTr);
+        ['click', 'touchstart', 'keypress', 'scroll', 'input'].forEach(evt => {
+            window.addEventListener(evt, resetIdleTimer, { passive: true });
+        });
+
+        setInterval(() => {
+            if (isFetching) {
+                resetIdleTimer();
                 return;
             }
-
-            items.forEach(item => {
-                const tr = document.createElement('tr');
-
-                const tdId = document.createElement('td');
-                tdId.textContent = item.id || '-';
-
-                const tdName = document.createElement('td');
-                tdName.textContent = item.name || '-';
-
-                const tdBrand = document.createElement('td');
-                tdBrand.textContent = item.brand || '-';
-
-                const tdUser = document.createElement('td');
-                if (item.borrowerName && item.borrowerId) {
-                    tdUser.textContent = `${item.borrowerName} (${item.borrowerId})`;
-                } else {
-                    tdUser.textContent = item.borrowerId || '-';
+            idleSeconds--;
+            const timerEl = document.getElementById('idle-timer');
+            if (timerEl) {
+                timerEl.innerText = `⏳ ${Math.max(0, idleSeconds)}s`;
+                if (idleSeconds <= 3) {
+                    timerEl.classList.add('warning');
                 }
-
-                const tdStatus = document.createElement('td');
-                const badge = document.createElement('span');
-                badge.className = 'status-badge';
-                badge.textContent = item.status || '借出中';
-                tdStatus.appendChild(badge);
-
-                const tdTime = document.createElement('td');
-                tdTime.textContent = item.borrowTime || '無紀錄';
-
-                tr.append(tdId, tdName, tdBrand, tdUser, tdStatus, tdTime);
-                tbody.appendChild(tr);
-            });
-        }
-
-        function applyFilter() {
-            const keyword = document.getElementById('filter-input').value.trim().toLowerCase();
-            if (!keyword) {
-                renderTable(currentBorrowedItems);
-                return;
             }
+            if (idleSeconds <= 0) {
+                logout();
+            }
+        }, 1000);
 
-            const filtered = currentBorrowedItems.filter(item => {
-                return (item.id && item.id.toLowerCase().includes(keyword)) ||
-                       (item.name && item.name.toLowerCase().includes(keyword)) ||
-                       (item.brand && item.brand.toLowerCase().includes(keyword)) ||
-                       (item.borrowerName && item.borrowerName.toLowerCase().includes(keyword)) ||
-                       (item.borrowerId && item.borrowerId.toLowerCase().includes(keyword));
-            });
-
-            renderTable(filtered);
-        }
-
-        function fetchList() {
-            const msg = document.getElementById('msg');
-            const container = document.getElementById('container');
-            const toolbar = document.getElementById('toolbar');
-            const statsGrid = document.getElementById('stats-grid');
-            const filterInput = document.getElementById('filter-input');
-
-            filterInput.value = '';
-            msg.style.display = 'block';
-            msg.innerText = '讀取最新資料中...';
-            container.style.display = 'none';
-            toolbar.style.display = 'none';
-            statsGrid.style.display = 'none';
-
-            fetch(`${API_URL}?action=list_borrowed`)
-                .then(res => res.json())
-                .then(res => {
-                    if (res.success && Array.isArray(res.data)) {
-                        currentBorrowedItems = res.data;
-
-                        const borrowedNum = res.borrowedCount !== undefined ? res.borrowedCount : currentBorrowedItems.length;
-                        const totalNum = res.totalCount !== undefined ? res.totalCount : borrowedNum;
-                        const availableNum = res.availableCount !== undefined ? res.availableCount : Math.max(0, totalNum - borrowedNum);
-
-                        document.getElementById('stat-total').textContent = totalNum;
-                        document.getElementById('stat-borrowed').textContent = borrowedNum;
-                        document.getElementById('stat-available').textContent = availableNum;
-                        statsGrid.style.display = 'grid';
-
-                        if (currentBorrowedItems.length === 0) {
-                            msg.innerText = '🎉 目前所有設備皆在架上，無借出紀錄！';
-                            return;
-                        }
-
-                        renderTable(currentBorrowedItems);
-
-                        msg.style.display = 'none';
-                        toolbar.style.display = 'flex';
-                        container.style.display = 'block';
-                    } else {
-                        msg.innerText = '讀取失敗：' + (res.message || '未知錯誤');
-                    }
-                })
-                .catch(err => {
-                    msg.innerText = '網路或連線錯誤，無法載入清單。';
-                });
-        }
-
-        window.addEventListener('DOMContentLoaded', fetchList);
-    </script>
-</body>
-</html>
+        function logout() {
+            localStorage.removeItem("
