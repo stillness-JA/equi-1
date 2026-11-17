@@ -9,14 +9,14 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             padding: 15px;
-            background-color: #f4f6f9;
+            background-color: #f8f9fa;
             margin: 0;
             color: #333;
         }
-        /* 全站統一頂部使用者與登出列 */
+        /* 與 scan.html 位置、寬度、樣式 100% 相同的頂部資訊與登出列 */
         .user-bar {
-            max-width: 950px;
-            margin: 0 auto 16px auto;
+            max-width: 420px;
+            margin: 0 auto 15px auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -26,13 +26,14 @@
             box-shadow: 0 1px 4px rgba(0,0,0,0.08);
             font-size: 13px;
             font-weight: 600;
-            gap: 8px;
+            gap: 6px;
         }
         .user-info {
             display: flex;
             align-items: center;
             flex-wrap: wrap;
-            gap: 6px;
+            gap: 5px;
+            text-align: left;
         }
         .role-tag {
             background: #007bff;
@@ -56,6 +57,7 @@
             padding: 4px 9px;
             border-radius: 12px;
             font-variant-numeric: tabular-nums;
+            transition: all 0.2s;
         }
         .timer-tag.warning {
             background: #f8d7da;
@@ -76,7 +78,7 @@
         }
         .btn-logout:hover { background: #dee2e6; }
 
-        h2 { text-align: center; margin: 8px 0 16px; font-weight: 700; }
+        h2 { text-align: center; margin: 5px 0 16px; font-weight: 700; }
 
         .btn-group {
             display: flex;
@@ -222,6 +224,7 @@
 </head>
 <body>
 
+    <!-- 與 scan.html 完全一致的頂部使用者與登出列 -->
     <div class="user-bar">
         <div class="user-info" id="user-display">👤 載入身分中...</div>
         <div class="right-controls">
@@ -340,4 +343,52 @@
         }, 1000);
 
         function logout() {
-            localStorage.removeItem("
+            localStorage.removeItem("EQUIP_USER");
+            window.location.href = "index.html";
+        }
+
+        function initUserSession() {
+            const savedUser = localStorage.getItem("EQUIP_USER");
+            if (!savedUser) {
+                window.location.href = "index.html";
+                return false;
+            }
+            currentUser = JSON.parse(savedUser);
+            const roleLower = (currentUser.role || "").toLowerCase().trim();
+            isAdminUser = (roleLower === "admin" || roleLower === "管理者");
+
+            const userDisplay = document.getElementById('user-display');
+            userDisplay.innerHTML = `<span>👤 ${currentUser.name} (${currentUser.id})</span> <span class="role-tag ${isAdminUser ? 'admin' : ''}">${isAdminUser ? '管理者' : '一般使用者'}</span>`;
+
+            document.getElementById('page-title').innerText = isAdminUser ? "📊 管理者設備總覽與借還紀錄" : "📋 我的借用與歸還紀錄";
+            document.getElementById('active-title').innerText = isAdminUser ? "📤 全系統目前借出中設備" : "📤 我目前尚未歸還的設備";
+            document.getElementById('history-title').innerText = isAdminUser ? "🕒 全體人員歷史借還流水帳" : "🕒 我的歷史借還紀錄";
+            return true;
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (initUserSession()) {
+                resetIdleTimer();
+                fetchRecords();
+            }
+        });
+
+        window.addEventListener('pageshow', () => {
+            if (initUserSession()) {
+                resetIdleTimer();
+            }
+        });
+
+        function renderActiveTable(items) {
+            const tbody = document.getElementById('active-body');
+            tbody.innerHTML = '';
+
+            if (items.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 6;
+                td.style.textAlign = 'center';
+                td.style.padding = '22px';
+                td.style.color = '#888';
+                td.textContent = isAdminUser ? '🎉 目前沒有任何設備處於借出狀態！' : '✅ 您目前沒有未歸還的設備';
+                tr
