@@ -13,7 +13,6 @@
             margin: 0;
             color: #333;
         }
-        /* 與 scan.html 100% 相同的頂部使用者與登出列 */
         .user-bar {
             max-width: 420px;
             margin: 0 auto 15px auto;
@@ -66,7 +65,6 @@
         .btn-refresh { background-color: #007bff; color: white; }
         .btn-refresh:hover { background-color: #0056b3; }
 
-        /* 管理者專屬三欄統計看板 */
         .stats-grid {
             max-width: 950px;
             margin: 0 auto 22px;
@@ -185,11 +183,22 @@
 </head>
 <body>
 
-    <!-- 與 scan.html 完全一致的頂部資訊與登出列 -->
     <div class="user-bar">
-        <span id="user-display">👤 載入身分中...</span>
+        <span id="user-display"></span>
         <button type="button" class="btn-logout" onclick="logout()">登出</button>
     </div>
+
+    <script>
+        // 立即同步讀取同一位登入者，不顯示任何載入文字
+        const savedUserRaw = localStorage.getItem("EQUIP_USER");
+        if (!savedUserRaw) {
+            window.location.replace("index.html");
+        }
+        const currentUser = savedUserRaw ? JSON.parse(savedUserRaw) : { id: "", name: "", role: "user" };
+        const roleLower = (currentUser.role || "").toLowerCase().trim();
+        const isAdminUser = (roleLower === "admin" || roleLower === "管理者");
+        document.getElementById('user-display').textContent = `👤 ${currentUser.name} (${currentUser.id})`;
+    </script>
 
     <h2 id="page-title">📋 借還狀態與紀錄查詢</h2>
 
@@ -198,7 +207,6 @@
         <button type="button" class="action-btn btn-refresh" onclick="fetchRecords()">🔄 重新整理</button>
     </div>
 
-    <!-- 管理者專屬統計看板 -->
     <div class="stats-grid" id="stats-grid" style="display: none;">
         <div class="stat-card total">
             <div class="stat-label">📦 所有設備數</div>
@@ -216,7 +224,6 @@
 
     <div id="msg">讀取最新資料中，請稍候...</div>
 
-    <!-- 區塊一：目前借用中設備 -->
     <div id="active-section" style="display: none;">
         <div class="section-header">
             <h3 class="section-title" id="active-title">📤 目前借用中設備</h3>
@@ -238,7 +245,6 @@
         </div>
     </div>
 
-    <!-- 區塊二：歷史借用與歸還紀錄 -->
     <div id="history-section" style="display: none;">
         <div class="section-header">
             <h3 class="section-title" id="history-title">🕒 歷史借還紀錄</h3>
@@ -263,11 +269,13 @@
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbzkyhOuqf9guo10dAMUtgTUFRvRhQ1PMvTVBwvDMMEE_xNr5MUSLPbzdG--RPVicFt-/exec";
 
-        let currentUser = null;
-        let isAdminUser = false;
         let allHistoryLogs = [];
         let isFetching = false;
         let idleSeconds = 10;
+
+        document.getElementById('page-title').innerText = isAdminUser ? "📊 管理者設備總覽與借還紀錄" : "📋 我的借用與歸還紀錄";
+        document.getElementById('active-title').innerText = isAdminUser ? "📤 全系統目前借出中設備" : "📤 我目前尚未歸還的設備";
+        document.getElementById('history-title').innerText = isAdminUser ? "🕒 全體人員歷史借還流水帳" : "🕒 我的歷史借還紀錄";
 
         function resetIdleTimer() {
             idleSeconds = 10;
@@ -290,38 +298,8 @@
 
         function logout() {
             localStorage.removeItem("EQUIP_USER");
-            window.location.href = "index.html";
+            window.location.replace("index.html");
         }
-
-        function initUserSession() {
-            const savedUser = localStorage.getItem("EQUIP_USER");
-            if (!savedUser) {
-                window.location.href = "index.html";
-                return false;
-            }
-            currentUser = JSON.parse(savedUser);
-            const roleLower = (currentUser.role || "").toLowerCase().trim();
-            isAdminUser = (roleLower === "admin" || roleLower === "管理者");
-
-            document.getElementById('user-display').innerText = `👤 ${currentUser.name} (${currentUser.id})`;
-            document.getElementById('page-title').innerText = isAdminUser ? "📊 管理者設備總覽與借還紀錄" : "📋 我的借用與歸還紀錄";
-            document.getElementById('active-title').innerText = isAdminUser ? "📤 全系統目前借出中設備" : "📤 我目前尚未歸還的設備";
-            document.getElementById('history-title').innerText = isAdminUser ? "🕒 全體人員歷史借還流水帳" : "🕒 我的歷史借還紀錄";
-            return true;
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            if (initUserSession()) {
-                resetIdleTimer();
-                fetchRecords();
-            }
-        });
-
-        window.addEventListener('pageshow', () => {
-            if (initUserSession()) {
-                resetIdleTimer();
-            }
-        });
 
         function renderActiveTable(items) {
             const tbody = document.getElementById('active-body');
@@ -459,6 +437,8 @@
                     msg.innerText = '網路或連線錯誤，無法載入紀錄。';
                 });
         }
+
+        fetchRecords();
     </script>
 </body>
 </html>
