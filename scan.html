@@ -132,9 +132,20 @@
 <body>
 
     <div class="user-bar">
-        <span id="user-display">👤 載入身分中...</span>
+        <span id="user-display"></span>
         <button type="button" class="btn-logout" onclick="logout()">登出</button>
     </div>
+
+    <script>
+        const savedUserRaw = localStorage.getItem("EQUIP_USER");
+        if (!savedUserRaw) {
+            window.location.replace("index.html");
+        }
+        const currentUser = savedUserRaw ? JSON.parse(savedUserRaw) : { id: "", name: "", role: "user" };
+        const roleLower = (currentUser.role || "").toLowerCase().trim();
+        const isAdmin = (roleLower === "admin" || roleLower === "管理者");
+        document.getElementById('user-display').textContent = `👤 ${currentUser.name} (${currentUser.id})`;
+    </script>
 
     <h2>📷 設備掃描借還</h2>
 
@@ -144,7 +155,7 @@
     </div>
 
     <div>
-        <a href="list.html" id="records-link" class="query-link">📋 查看目前借出清單</a>
+        <a href="list.html" id="records-link" class="query-link">📋 查看借還紀錄</a>
     </div>
 
     <select id="camera-select"></select>
@@ -153,12 +164,14 @@
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbzkyhOuqf9guo10dAMUtgTUFRvRhQ1PMvTVBwvDMMEE_xNr5MUSLPbzdG--RPVicFt-/exec";
+        const IDLE_LIMIT_SECONDS = 120; // 閒置 2 分鐘自動登出
 
-        let currentUser = null;
+        document.getElementById('records-link').innerText = isAdmin ? "📊 管理者總覽與借還紀錄" : "📋 我的借用與歸還紀錄";
+
         let isProcessing = false;
         let isRequestingApi = false;
         let currentMode = "borrow";
-        let idleSeconds = 10;
+        let idleSeconds = IDLE_LIMIT_SECONDS;
 
         const resultBox = document.getElementById('result-box');
         const cameraSelect = document.getElementById('camera-select');
@@ -166,7 +179,7 @@
         const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
         function resetIdleTimer() {
-            idleSeconds = 10;
+            idleSeconds = IDLE_LIMIT_SECONDS;
         }
 
         ['click', 'touchstart', 'keypress', 'scroll'].forEach(evt => {
@@ -184,36 +197,9 @@
             }
         }, 1000);
 
-        function initUserSession() {
-            const savedUser = localStorage.getItem("EQUIP_USER");
-            if (!savedUser) {
-                window.location.href = "index.html";
-                return false;
-            }
-            currentUser = JSON.parse(savedUser);
-            const roleLower = (currentUser.role || "").toLowerCase().trim();
-            const isAdmin = (roleLower === "admin" || roleLower === "管理者");
-
-            document.getElementById('user-display').innerText = `👤 ${currentUser.name} (${currentUser.id})`;
-            document.getElementById('records-link').innerText = isAdmin ? "📊 管理者總覽與借還紀錄" : "📋 我的借用與歸還紀錄";
-            return true;
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            if (initUserSession()) {
-                resetIdleTimer();
-            }
-        });
-
-        window.addEventListener('pageshow', () => {
-            if (initUserSession()) {
-                resetIdleTimer();
-            }
-        });
-
         function logout() {
             localStorage.removeItem("EQUIP_USER");
-            window.location.href = "index.html";
+            window.location.replace("index.html");
         }
 
         function setMode(mode) {
