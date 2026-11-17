@@ -65,6 +65,7 @@
         .btn-refresh { background-color: #007bff; color: white; }
         .btn-refresh:hover { background-color: #0056b3; }
 
+        /* 管理者專屬可點擊統計卡片 */
         .stats-grid {
             max-width: 950px;
             margin: 0 auto 22px;
@@ -78,15 +79,28 @@
             padding: 18px 12px;
             text-align: center;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+            border: 2px solid transparent;
             border-top: 5px solid #ccc;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+            user-select: none;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
         }
         .stat-card.total { border-top-color: #007bff; }
         .stat-card.borrowed { border-top-color: #dc3545; background-color: #fffafa; }
         .stat-card.available { border-top-color: #28a745; background-color: #f8fff9; }
 
+        .stat-card.total.active { border-color: #007bff; box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2); }
+        .stat-card.borrowed.active { border-color: #dc3545; box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2); }
+        .stat-card.available.active { border-color: #28a745; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2); }
+
         .stat-label { font-size: 14px; font-weight: 700; color: #555; margin-bottom: 6px; }
         .stat-value { font-size: 32px; font-weight: 800; line-height: 1.1; }
         .stat-unit { font-size: 14px; font-weight: 600; margin-left: 3px; }
+        .stat-hint { font-size: 11px; color: #888; margin-top: 6px; }
         .stat-card.total .stat-value { color: #007bff; }
         .stat-card.borrowed .stat-value { color: #dc3545; }
         .stat-card.available .stat-value { color: #28a745; }
@@ -141,7 +155,9 @@
             border-bottom: 1px solid #eef0f2;
             font-size: 14px;
         }
-        th { background-color: #007bff; color: white; white-space: nowrap; }
+        th { background-color: #007bff; color: white; white-space: nowrap; transition: background-color 0.2s; }
+        th.th-borrowed { background-color: #dc3545; }
+        th.th-available { background-color: #28a745; }
         th.history-th { background-color: #495057; }
         th:first-child { border-top-left-radius: 6px; }
         th:last-child { border-top-right-radius: 6px; }
@@ -150,6 +166,15 @@
         .badge-borrowed {
             background-color: #ffeaa7;
             color: #d63031;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 12px;
+            display: inline-block;
+        }
+        .badge-available {
+            background-color: #d4edda;
+            color: #155724;
             padding: 4px 10px;
             border-radius: 12px;
             font-weight: 700;
@@ -206,31 +231,37 @@
         <button type="button" class="action-btn btn-refresh" onclick="fetchRecords()">🔄 重新整理</button>
     </div>
 
+    <!-- 管理者專屬可點擊統計看板 -->
     <div class="stats-grid" id="stats-grid" style="display: none;">
-        <div class="stat-card total">
+        <div class="stat-card total" id="card-all" onclick="switchAdminFilter('all')">
             <div class="stat-label">📦 所有設備數</div>
             <div class="stat-value"><span id="stat-total">0</span><span class="stat-unit">件</span></div>
+            <div class="stat-hint">點擊檢視全部</div>
         </div>
-        <div class="stat-card borrowed">
+        <div class="stat-card borrowed active" id="card-borrowed" onclick="switchAdminFilter('borrowed')">
             <div class="stat-label">📤 已借出</div>
             <div class="stat-value"><span id="stat-borrowed">0</span><span class="stat-unit">件</span></div>
+            <div class="stat-hint">點擊檢視借出中</div>
         </div>
-        <div class="stat-card available">
+        <div class="stat-card available" id="card-available" onclick="switchAdminFilter('available')">
             <div class="stat-label">✅ 剩餘可借</div>
             <div class="stat-value"><span id="stat-available">0</span><span class="stat-unit">件</span></div>
+            <div class="stat-hint">點擊檢視可借用</div>
         </div>
     </div>
 
     <div id="msg">讀取最新資料中，請稍候...</div>
 
+    <!-- 區塊一：設備清冊 / 目前借用中設備 -->
     <div id="active-section" style="display: none;">
         <div class="section-header">
             <h3 class="section-title" id="active-title">📤 目前借用中設備</h3>
+            <input type="text" id="eq-filter-input" class="search-input" placeholder="🔍 搜尋設備編號、名稱、廠牌或借用人..." oninput="applyEquipmentFilter()">
         </div>
         <div class="table-container">
             <table>
                 <thead>
-                    <tr>
+                    <tr id="active-thead-row">
                         <th>設備編號</th>
                         <th>設備名稱</th>
                         <th>廠牌</th>
@@ -244,10 +275,11 @@
         </div>
     </div>
 
+    <!-- 區塊二：歷史借用與歸還紀錄 -->
     <div id="history-section" style="display: none;">
         <div class="section-header">
             <h3 class="section-title" id="history-title">🕒 歷史借還紀錄</h3>
-            <input type="text" id="filter-input" class="search-input" placeholder="🔍 搜尋設備編號、名稱或借用人..." oninput="applyHistoryFilter()">
+            <input type="text" id="filter-input" class="search-input" placeholder="🔍 搜尋歷史紀錄..." oninput="applyHistoryFilter()">
         </div>
         <div class="table-container">
             <table>
@@ -269,6 +301,9 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbzkyhOuqf9guo10dAMUtgTUFRvRhQ1PMvTVBwvDMMEE_xNr5MUSLPbzdG--RPVicFt-/exec";
         const IDLE_LIMIT_SECONDS = 120; // 閒置 2 分鐘自動登出
 
+        let allEquipmentsData = [];
+        let userBorrowedData = [];
+        let currentAdminTab = "borrowed"; // 'all' | 'borrowed' | 'available'
         let allHistoryLogs = [];
         let isFetching = false;
         let idleSeconds = IDLE_LIMIT_SECONDS;
@@ -301,6 +336,67 @@
             window.location.replace("index.html");
         }
 
+        // 管理者點擊上方三張統計卡片切換檢視
+        function switchAdminFilter(tab) {
+            if (!isAdminUser) return;
+            resetIdleTimer();
+            currentAdminTab = tab;
+
+            document.getElementById('card-all').classList.toggle('active', tab === 'all');
+            document.getElementById('card-borrowed').classList.toggle('active', tab === 'borrowed');
+            document.getElementById('card-available').classList.toggle('active', tab === 'available');
+
+            const titleEl = document.getElementById('active-title');
+            const thList = document.querySelectorAll('#active-thead-row th');
+
+            if (tab === 'all') {
+                titleEl.innerText = "📦 全系統所有設備清冊";
+                thList.forEach(th => th.className = "");
+            } else if (tab === 'borrowed') {
+                titleEl.innerText = "📤 全系統目前借出中設備";
+                thList.forEach(th => th.className = "th-borrowed");
+            } else if (tab === 'available') {
+                titleEl.innerText = "✅ 全系統剩餘可借用設備";
+                thList.forEach(th => th.className = "th-available");
+            }
+
+            document.getElementById('eq-filter-input').value = '';
+            applyEquipmentFilter();
+        }
+
+        function applyEquipmentFilter() {
+            resetIdleTimer();
+            const keyword = document.getElementById('eq-filter-input').value.trim().toLowerCase();
+
+            let baseList = [];
+            if (isAdminUser) {
+                if (currentAdminTab === 'all') {
+                    baseList = allEquipmentsData;
+                } else if (currentAdminTab === 'borrowed') {
+                    baseList = allEquipmentsData.filter(item => item.isBorrowed);
+                } else if (currentAdminTab === 'available') {
+                    baseList = allEquipmentsData.filter(item => item.isAvailable);
+                }
+            } else {
+                baseList = userBorrowedData;
+            }
+
+            if (!keyword) {
+                renderActiveTable(baseList);
+                return;
+            }
+
+            const filtered = baseList.filter(item => {
+                return (item.id && item.id.toLowerCase().includes(keyword)) ||
+                       (item.name && item.name.toLowerCase().includes(keyword)) ||
+                       (item.brand && item.brand.toLowerCase().includes(keyword)) ||
+                       (item.borrowerName && item.borrowerName.toLowerCase().includes(keyword)) ||
+                       (item.borrowerId && item.borrowerId.toLowerCase().includes(keyword));
+            });
+
+            renderActiveTable(filtered);
+        }
+
         function renderActiveTable(items) {
             const tbody = document.getElementById('active-body');
             tbody.innerHTML = '';
@@ -312,7 +408,11 @@
                 td.style.textAlign = 'center';
                 td.style.padding = '22px';
                 td.style.color = '#888';
-                td.textContent = isAdminUser ? '🎉 目前沒有任何設備處於借出狀態！' : '✅ 您目前沒有未歸還的設備';
+                if (isAdminUser) {
+                    td.textContent = currentAdminTab === 'borrowed' ? '🎉 目前沒有任何設備處於借出狀態！' : '無符合條件的設備資料';
+                } else {
+                    td.textContent = '✅ 您目前沒有未歸還的設備';
+                }
                 tr.appendChild(td);
                 tbody.appendChild(tr);
                 return;
@@ -320,13 +420,21 @@
 
             items.forEach(item => {
                 const tr = document.createElement('tr');
+                const isItemBorrowed = item.isBorrowed !== undefined ? item.isBorrowed : (item.status === '借出中');
+                const badgeClass = isItemBorrowed ? 'badge-borrowed' : 'badge-available';
+                const statusText = item.status || (isItemBorrowed ? '借出中' : '可借用');
+                const borrowerText = isItemBorrowed
+                    ? (item.borrowerName ? `${item.borrowerName} (${item.borrowerId})` : (item.borrowerId || '-'))
+                    : '-';
+                const timeText = isItemBorrowed ? (item.borrowTime || '無紀錄') : '-';
+
                 tr.innerHTML = `
                     <td>${item.id || '-'}</td>
                     <td>${item.name || '-'}</td>
                     <td>${item.brand || '-'}</td>
-                    <td>${item.borrowerName ? `${item.borrowerName} (${item.borrowerId})` : (item.borrowerId || '-')}</td>
-                    <td><span class="badge-borrowed">${item.status || '借出中'}</span></td>
-                    <td>${item.borrowTime || '無紀錄'}</td>
+                    <td>${borrowerText}</td>
+                    <td><span class="${badgeClass}">${statusText}</span></td>
+                    <td>${timeText}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -391,9 +499,9 @@
             const statsGrid = document.getElementById('stats-grid');
             const activeSection = document.getElementById('active-section');
             const historySection = document.getElementById('history-section');
-            const filterInput = document.getElementById('filter-input');
 
-            filterInput.value = '';
+            document.getElementById('eq-filter-input').value = '';
+            document.getElementById('filter-input').value = '';
             msg.style.display = 'block';
             msg.innerText = '讀取最新資料中，請稍候...';
             statsGrid.style.display = 'none';
@@ -411,15 +519,17 @@
                     if (res.success) {
                         msg.style.display = 'none';
 
-                        if (res.isAdmin || res.totalCount !== undefined) {
+                        if (res.isAdmin) {
+                            allEquipmentsData = res.allEquipments || res.borrowedList || [];
                             document.getElementById('stat-total').textContent = res.totalCount || 0;
                             document.getElementById('stat-borrowed').textContent = res.borrowedCount || 0;
                             document.getElementById('stat-available').textContent = res.availableCount || 0;
                             statsGrid.style.display = 'grid';
+                            switchAdminFilter(currentAdminTab);
+                        } else {
+                            userBorrowedData = res.borrowedList || [];
+                            renderActiveTable(userBorrowedData);
                         }
-
-                        const activeItems = res.borrowedList || res.data || [];
-                        renderActiveTable(activeItems);
                         activeSection.style.display = 'block';
 
                         if (Array.isArray(res.historyLogs)) {
